@@ -5,6 +5,7 @@
  *  Author: Cornelius Fudge
  */ 
 
+# define F_CPU 1000000UL
 
 #include <avr/io.h>
 #include <util/delay.h>
@@ -13,7 +14,7 @@
 #define led1_on()  PORTC |= _BV(4)
 #define led1_off()  PORTC &= ~_BV(4)
 #define led2_on()  PORTC |= _BV(5)
-#define led2_off()  PORTC |= _BV(5)
+#define led2_off()  PORTC &= ~_BV(5)
 
 int main(void)
 {
@@ -22,7 +23,11 @@ int main(void)
 
     while(1)
     {
+		_delay_ms(500);
         led1_on();
+		led2_off();
+		_delay_ms(500);
+		led1_off();
 		led2_on();
     }
 }
