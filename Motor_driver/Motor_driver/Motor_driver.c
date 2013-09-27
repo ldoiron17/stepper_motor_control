@@ -25,15 +25,11 @@ int main(void)
     OCR1A = 1500;                       // 0.001024*1954 ~= 2 therefore SIG_OUTPUT_COMPARE1A will be triggered every 2 seconds
     OCR1B = 977;                       // 0.001024*977 = 1.0004480 therefore SIG_OUTPUT_COMPARE1B will be triggered every second
 	sei();
-
+	SPI_MasterInit();
+	char data = 7;
     while(1)
     {
-		////_delay_ms(500);
-        ////led1_on();
-		////led2_off();
-		////_delay_ms(500);
-		////led1_off();
-		////led2_on();
+		SPI_MasterTransmit(data);
     }
 }
 
@@ -49,3 +45,18 @@ ISR(TIMER1_COMPB_vect) //interrupt service routine for timer1 compare B flag
 	led2_on();
 }
 
+void SPI_MasterInit(void)
+{
+	/* Set MOSI and SCK output, all others input */
+	DDRB  = 0b00101000; 
+	/* Enable SPI, Master, set clock rate fck/16 */
+	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+}
+void SPI_MasterTransmit(char cData)
+{
+	/* Start transmission */
+	SPDR = cData;
+	/* Wait for transmission complete */
+	while(!(SPSR & (1<<SPIF)))
+	;
+}
