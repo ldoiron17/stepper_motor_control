@@ -22,7 +22,7 @@ int main(void)
 
     while(1)
     {
-        led1_on()
-		led2_on()
+        led1_on();
+		led2_on();
     }
 }
