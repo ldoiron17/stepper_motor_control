@@ -7,12 +7,22 @@
 
 
 #include <avr/io.h>
+#include <util/delay.h>
+#include <avr/interrupt.h>
+
+#define led1_on()  PORTC |= _BV(4)
+#define led1_off()  PORTC &= ~_BV(4)
+#define led2_on()  PORTC |= _BV(5)
+#define led2_off()  PORTC |= _BV(5)
 
 int main(void)
 {
+	
+	DDRC  = 0b00110000;   // Turn PC4 and PC5 to output (LED1 and LED2)
+
     while(1)
     {
-        //TODO:: Please write your application code 
-		//blah blha blahahbhsdbf
+        led1_on()
+		led2_on()
     }
 }
