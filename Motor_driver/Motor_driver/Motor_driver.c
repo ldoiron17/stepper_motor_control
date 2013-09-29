@@ -25,11 +25,51 @@ int main(void)
     OCR1A = 1500;                       // 0.001024*1954 ~= 2 therefore SIG_OUTPUT_COMPARE1A will be triggered every 2 seconds
     OCR1B = 977;                       // 0.001024*977 = 1.0004480 therefore SIG_OUTPUT_COMPARE1B will be triggered every second
 	sei();
+
+	
+	char SPI_controlreg[3] = {0, 0, 0};	//Variable for holding SPI packet for initialization of A3985 chip
+	char SPI_datareg[3] = {0, 0, 0};	//Variable for holding SPI packet for the direction and control of H-bridges during operation of driving the MOSFETS (SPI to A3985 chip)
+    
+	
+	//Note that my SPI send register on the ATMEGA168PA is only 8 bits so I break the SPI packet up into 3 separate 8 bit packets and zero pad the most
+	//significant 6 bits to make one 18 bit packet
+	
+	/* A3985 control register SPI packet
+	--------------------------------------------------------------------------------------------------------------------------------------------------
+	Bit #'s ----- Value ------------------- Description ----------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------------------------------------------
+	D18-------- 1'b1  ---- Idle Mode (1'b1 -> fully operational, 1'bo -> Idle mode, Vreg is off)------------------------------------------------------
+	D17:D16 --- 2'b00 ---- Reserved bits, always set these to zero -----------------------------------------------------------------------------------
+	D15:D14 --- 2'b10 ---- Synchronous Rectification (2'b10 -> Active mode)---------------------------------------------------------------------------
+	D13:D12 --- 2'b00 ---- Clock select (2'b00 -> use internal clock)---------------------------------------------------------------------------------
+	D11:D8 ---- 4'b0000 -- Fast Time Decay (4'b0000 with a 4MHz clock -> 1.75 us)---------------------------------------------------------------------
+	D7:D3 ----- 5'b00000 - Set the fixed off time for the internal PWM of the A3985 (5'b00000with a 4 MHZ clock -> 1.75 us)---------------------------
+	D2:D1 ----- 2'b00 ---- Set the blank time (t_dead = t_blank/2) (2'b00 -> t_blank = 1us, tdead = 500 ns)-------------------------------------------
+	D0 -------- 1'b1 ----- Choose to communicate with the control register----------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------------------------------------------
+	*/
+	
+	/* A3985 data register SPI packet
+	--------------------------------------------------------------------------------------------------------------------------------------------------
+	Bit #'s ----- Value ------------------- Description ----------------------------------------------------------------------------------------------
+	--------------------------------------------------------------------------------------------------------------------------------------------------
+	D18:D17---- 2'b01 ----- Set Gm the scaling factor (2'b01 -> Gm = 12)------------------------------------------------------------------------------
+	D16 ------- 1'b0 ------ Bridge 1 Mode (0 -> mixed Decay, 1 -> slow decay)-------------------------------------------------------------------------
+	D15 ------- 1'b0 ------ This sets the direction of H-Bridge 1, depending on wiring of motor, 1 way turns clockwise and the other counter clockwise)
+	D14:D9 ---- 6'b000010 - This sets the DAC value for controlling I_trip of Bridge2 (6'b000010 -> I_trip = 0.781 Amps)-------------------------------
+	D8 -------- 1'b0 ------ Bridge 1 Mode (0 -> mixed Decay, 1 -> slow decay)--------------------------------------------------------------------------
+	D7 -------- 1'b0 ------ This sets the direction of H-Bridge 1, depending on wiring of motor, 1 way turns clockwise and the other counter clockwise)
+	D6:D1 ----- 6'b000010 - This sets the DAC value for controlling I_trip of Bridge1 (6'b000010 -> I_trip = 0.781 Amps)-------------------------------
+	D0 -------- 1'b0 ------ Choose to communicate with the data register-------------------------------------------------------------------------------
+	---------------------------------------------------------------------------------------------------------------------------------------------------
+	*/
+	
+	SPI_controlreg[2] = 
+	
 	SPI_MasterInit();
-	char data = 7;
-    while(1)
+	for(i=0; i<3; i++)
     {
-		SPI_MasterTransmit(data);
+		SPI_MasterTransmit(SPI_controlreg[i]);
     }
 }
 
