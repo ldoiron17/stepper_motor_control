@@ -15,17 +15,21 @@
 #define led1_off()  PORTC &= ~_BV(4)
 #define led2_on()  PORTC |= _BV(5)
 #define led2_off()  PORTC &= ~_BV(5)
+#define pull_STR_high()  PORTB |= _BV(7)
+#define pull_STR_low() PORTB &= ~_BV(7)
+#define pull_WC_high()  PORTB |= _BV(6)
+#define pull_WC_low() PORTB &= ~_BV(6)
 
 int main(void)
 {
-	
+	//Set direction registers (1 -> output, 0 -> input)
 	DDRC  = 0b00110000;   // Turn PC4 and PC5 to output (LED1 and LED2)
 	TIMSK1 = _BV(OCIE1A) | _BV(OCIE1B); // Enable Interrupt Timer/Counter1, Output Compare A & B (SIG_OUTPUT_COMPARE1A/SIG_OUTPUT_COMPARE1B)
 	TCCR1B = _BV(CS12) | _BV(CS10) | _BV(WGM12);    // Clock/1024, 0.001024 seconds per tick, Mode=CTC
     OCR1A = 1500;                       // 0.001024*1954 ~= 2 therefore SIG_OUTPUT_COMPARE1A will be triggered every 2 seconds
     OCR1B = 977;                       // 0.001024*977 = 1.0004480 therefore SIG_OUTPUT_COMPARE1B will be triggered every second
 	sei();
-
+	
 	
 	char SPI_controlreg[3] = {0, 0, 0};	//Variable for holding SPI packet for initialization of A3985 chip
 	char SPI_datareg[3] = {0, 0, 0};	//Variable for holding SPI packet for the direction and control of H-bridges during operation of driving the MOSFETS (SPI to A3985 chip)
@@ -64,12 +68,26 @@ int main(void)
 	---------------------------------------------------------------------------------------------------------------------------------------------------
 	*/
 	
-	SPI_controlreg[2] = 
+	SPI_controlreg[2] = 2;
+	SPI_controlreg[1] = 64;
+	SPI_controlreg[0] = 0;
 	
+	SPI_datareg[2] = 1;
+	SPI_datareg[1] = 2;
+	SPI_datareg[0] = 0;
+	
+	int i;
 	SPI_MasterInit();
-	for(i=0; i<3; i++)
+	SPI_MasterTransmit(SPI_controlreg[2], SPI_controlreg[1], SPI_controlreg[0]);
+	
+	while(1)//for(i=0; i<3; i++)
     {
-		SPI_MasterTransmit(SPI_controlreg[i]);
+		SPI_MasterTransmit(SPI_datareg[2], SPI_datareg[1], SPI_datareg[0]);
+		 //DDRB  = 0b11101100; 
+		 //PORTB |= _BV(3);
+		 //
+		 //DDRD  = 0b00000010;
+		 //PORTD |= _BV(6);
     }
 }
 
@@ -88,15 +106,35 @@ ISR(TIMER1_COMPB_vect) //interrupt service routine for timer1 compare B flag
 void SPI_MasterInit(void)
 {
 	/* Set MOSI and SCK output, all others input */
-	DDRB  = 0b00101000; 
+	DDRB  = 0b11101100;   // Turn PB7,PB6, PB5, PB3, and PB2 to output pins (STR, WC, SCK, MOSI and ENABLE for A3985 SPI, PB4=MISO which is set to input, PB1 and PB0 aren't used)
 	/* Enable SPI, Master, set clock rate fck/16 */
 	SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+	
 }
-void SPI_MasterTransmit(char cData)
+void SPI_MasterTransmit(char data1, char data2, char data3)
 {
+	
+	pull_WC_high();
+	pull_STR_low();
+	
 	/* Start transmission */
-	SPDR = cData;
+	SPDR = data1;
 	/* Wait for transmission complete */
-	while(!(SPSR & (1<<SPIF)))
-	;
+	while(!(SPSR & (1<<SPIF)));
+
+	
+	/* Start transmission */
+	SPDR = data2;
+	/* Wait for transmission complete */
+	while(!(SPSR & (1<<SPIF)));
+
+	
+	/* Start transmission */
+	SPDR = data3;
+	/* Wait for transmission complete */
+	while(!(SPSR & (1<<SPIF)));
+	pull_WC_low();
+	pull_STR_high();
+
+	
 }
